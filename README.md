@@ -57,6 +57,3 @@ This system can help financial institutions:
    pip install -r requirements.txt
 3. Run the notebook or Streamlit app
 
-## Author
-
-Bongiwe Dipodi
