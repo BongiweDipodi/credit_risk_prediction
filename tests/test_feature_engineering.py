@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.feature_engineering import encode_categorical
+from src.feature_engineering import encode_categorical, scale_numerical
 
 
 class TestFeatureEngineering(unittest.TestCase):
@@ -45,9 +45,30 @@ class TestFeatureEngineering(unittest.TestCase):
         self.assertTrue(all(col.startswith('employment_status_') or col.startswith('credit_history_') or col in ['age', 'income'] for col in encoded_df.columns))
         self.assertEqual(len(encoder.categories_), 2)
 
+    def test_scale_numerical_defaults(self):
+        scaled_df, scaler = scale_numerical(self.test_data, numerical_columns=['age', 'income'])
+
+        self.assertEqual(scaled_df.shape, self.test_data.shape)
+        self.assertTrue(hasattr(scaler, 'mean_'))
+        self.assertAlmostEqual(scaled_df['age'].mean(), 0.0, places=6)
+        self.assertAlmostEqual(scaled_df['income'].mean(), 0.0, places=6)
+        self.assertAlmostEqual(scaled_df['age'].std(ddof=0), 1.0, places=6)
+        self.assertAlmostEqual(scaled_df['income'].std(ddof=0), 1.0, places=6)
+
+    def test_scale_numerical_auto_select(self):
+        scaled_df, scaler = scale_numerical(self.test_data)
+
+        self.assertIn('age', scaled_df.columns)
+        self.assertIn('income', scaled_df.columns)
+        self.assertTrue(all(col in scaler.feature_names_in_ for col in ['age', 'income']))
+
     def test_unknown_method_raises(self):
         with self.assertRaises(ValueError):
-            encode_categorical(self.test_data, method='unsupported')
+            encode_categorical(
+                self.test_data,
+                categorical_columns=['employment_status', 'credit_history'],
+                method='unsupported',
+            )
 
 
 if __name__ == '__main__':

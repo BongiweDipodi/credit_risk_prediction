@@ -1,2 +1,14 @@
 2026-06-16 17:09:04 [INFO] credit_risk_prediction: Label encoding column: employment_status
 2026-06-16 17:09:04 [INFO] credit_risk_prediction: Label encoding column: credit_history
+2026-06-16 17:12:06 [INFO] credit_risk_prediction: Label encoding column: employment_status
+2026-06-16 17:12:06 [INFO] credit_risk_prediction: Label encoding column: credit_history
+2026-06-16 17:12:06 [INFO] credit_risk_prediction: Auto-selected numerical columns for scaling: ['age', 'income']
+2026-06-16 17:12:06 [INFO] credit_risk_prediction: Scaling numerical columns: ['age', 'income']
+2026-06-16 17:12:06 [INFO] credit_risk_prediction: Scaling numerical columns: ['age', 'income']
+2026-06-16 17:21:54 [INFO] credit_risk_prediction: Label encoding column: employment_status
+2026-06-16 17:21:54 [INFO] credit_risk_prediction: Label encoding column: credit_history
+2026-06-16 17:21:54 [INFO] credit_risk_prediction: One-hot encoding columns: ['employment_status', 'credit_history']
+2026-06-16 17:21:54 [INFO] credit_risk_prediction: Auto-selected numerical columns for scaling: ['age', 'income']
+2026-06-16 17:21:54 [INFO] credit_risk_prediction: Scaling numerical columns: ['age', 'income']
+2026-06-16 17:21:54 [INFO] credit_risk_prediction: Scaling numerical columns: ['age', 'income']
+2026-06-16 17:21:54 [ERROR] credit_risk_prediction: Unsupported encoding method: unsupported. Use 'onehot' or 'label'.
