@@ -74,10 +74,84 @@ def load_data(file_path: str, encoding: str = 'utf-8') -> pd.DataFrame:
         raise Exception(error_msg) from e
 
 
-def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Perform basic data cleaning"""
-    df = df.drop('clientid', axis=1)
-    df = df.dropna()
+def clean_data(
+    df: pd.DataFrame,
+    drop_columns: Optional[list[str]] = None,
+    missing_strategy: str = 'drop',
+    outlier_threshold: float = 3.0,
+) -> pd.DataFrame:
+    """Clean a DataFrame by removing duplicates, handling missing values, and removing outliers.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataset.
+    drop_columns : Optional[list[str]], optional
+        Columns to drop before cleaning. Defaults to ['clientid'] if present.
+    missing_strategy : str, optional
+        Strategy for missing values: 'drop' or 'fill'. Default is 'drop'.
+    outlier_threshold : float, optional
+        Z-score threshold for numeric outlier removal. Set to 0 to disable. Default is 3.0.
+
+    Returns
+    -------
+    pd.DataFrame
+        Cleaned DataFrame.
+    """
+    df = df.copy()
+
+    if drop_columns is None:
+        drop_columns = ['clientid']
+
+    existing_drop_columns = [col for col in drop_columns if col in df.columns]
+    if existing_drop_columns:
+        logger.info(f"Dropping columns: {existing_drop_columns}")
+        df = df.drop(columns=existing_drop_columns)
+
+    initial_shape = df.shape
+    df = df.drop_duplicates()
+    if df.shape != initial_shape:
+        logger.info(f"Dropped duplicates: {initial_shape[0] - df.shape[0]} rows removed")
+
+    if missing_strategy == 'drop':
+        before_missing = df.shape[0]
+        df = df.dropna()
+        logger.info(f"Dropped rows with missing values: {before_missing - df.shape[0]} rows removed")
+    elif missing_strategy == 'fill':
+        numeric_columns = df.select_dtypes(include=['number']).columns
+        categorical_columns = df.select_dtypes(include=['object', 'category']).columns
+
+        for column in numeric_columns:
+            if df[column].isna().any():
+                median_value = df[column].median()
+                df[column] = df[column].fillna(median_value)
+                logger.info(f"Filled missing numeric values in {column} with median={median_value}")
+
+        for column in categorical_columns:
+            if df[column].isna().any():
+                mode_value = df[column].mode()
+                if not mode_value.empty:
+                    df[column] = df[column].fillna(mode_value.iloc[0])
+                    logger.info(f"Filled missing categorical values in {column} with mode={mode_value.iloc[0]}")
+                else:
+                    df[column] = df[column].fillna('unknown')
+                    logger.info(f"Filled missing categorical values in {column} with 'unknown'")
+    else:
+        error_msg = f"Unknown missing_strategy '{missing_strategy}'. Use 'drop' or 'fill'."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    if outlier_threshold and outlier_threshold > 0:
+        numeric_columns = df.select_dtypes(include=['number']).columns
+        if len(numeric_columns) > 0:
+            z_scores = (df[numeric_columns] - df[numeric_columns].mean()) / df[numeric_columns].std(ddof=0)
+            outlier_mask = z_scores.abs().gt(outlier_threshold).any(axis=1)
+            removed_count = int(outlier_mask.sum())
+            if removed_count > 0:
+                df = df.loc[~outlier_mask].reset_index(drop=True)
+                logger.info(f"Removed outliers: {removed_count} rows removed using z-score threshold {outlier_threshold}")
+
+    logger.info(f"Cleaned data shape: {df.shape}")
     return df
 
 
