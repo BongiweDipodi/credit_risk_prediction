@@ -1,12 +1,9 @@
 import pandas as pd
-import logging
 import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from src.logger import logger
 
 
 def load_data(file_path: str, encoding: str = 'utf-8') -> pd.DataFrame:
@@ -148,31 +145,6 @@ def validate_data(
     categorical_values: Optional[Dict[str, list[Any]]] = None,
 ) -> Dict[str, Any]:
     """Validate dataset quality and return a summary of issues.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame to validate.
-    expected_columns : Optional[list[str]], optional
-        List of expected columns. Missing or extra columns are reported.
-    required_columns : Optional[list[str]], optional
-        Columns that must not contain missing values.
-    missing_threshold : float, optional
-        Maximum allowed proportion of missing values per column.
-    numeric_ranges : Optional[Dict[str, tuple[float, float]]], optional
-        Acceptable ranges for numeric columns.
-    categorical_values : Optional[Dict[str, list[Any]]], optional
-        Allowed values for categorical columns.
-
-    Returns
-    -------
-    Dict[str, Any]
-        Summary of validation checks.
-
-    Raises
-    ------
-    ValueError
-        If validation fails for required schema or critical data quality issues.
     """
     summary: Dict[str, Any] = {
         'row_count': len(df),
