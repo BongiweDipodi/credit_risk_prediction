@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.data_processing import load_data
+from src.data_processing import load_data, validate_data
 
 
 class TestLoadData(unittest.TestCase):
@@ -81,6 +81,34 @@ class TestLoadData(unittest.TestCase):
                 load_data(str(corrupted_file))
         finally:
             corrupted_file.unlink()
+
+    def test_validate_data(self):
+        """Test validate_data returns correct validation summary."""
+        validation_summary = validate_data(
+            self.sample_df,
+            expected_columns=['age', 'income', 'loan_amount', 'employment_status', 'credit_score'],
+            required_columns=['age', 'income', 'loan_amount'],
+            missing_threshold=0.2,
+            numeric_ranges={'age': (18, 100), 'income': (0, 200000)},
+            categorical_values={'employment_status': ['Employed', 'Self-Employed', 'Unemployed']},
+        )
+
+        self.assertEqual(validation_summary['row_count'], 4)
+        self.assertEqual(validation_summary['column_count'], 5)
+        self.assertEqual(validation_summary['duplicate_rows'], 0)
+        self.assertEqual(validation_summary['missing_values']['age']['count'], 0)
+        self.assertEqual(validation_summary['missing_values']['income']['count'], 0)
+        self.assertEqual(validation_summary['out_of_range'], {})
+        self.assertEqual(validation_summary['invalid_categories'], {})
+
+    def test_validate_data_missing_column(self):
+        """Test validate_data raises for missing expected columns."""
+        incomplete_df = self.sample_df.drop(columns=['employment_status'])
+        with self.assertRaises(ValueError):
+            validate_data(
+                incomplete_df,
+                expected_columns=['age', 'income', 'loan_amount', 'employment_status', 'credit_score'],
+            )
 
 
 if __name__ == "__main__":
