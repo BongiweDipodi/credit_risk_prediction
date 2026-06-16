@@ -1,5 +1,8 @@
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from sklearn.feature_selection import SelectKBest, f_classif, chi2
+from sklearn.ensemble import RandomForestClassifier
 
 from src.logger import logger
 
@@ -106,4 +109,84 @@ def scale_numerical(
     logger.info(f"Scaling numerical columns: {numerical_columns}")
     df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
     return df, scaler
+
+
+def select_features(
+    df: pd.DataFrame,
+    target: pd.Series,
+    method: str = 'f_classif',
+    k: int | str = 'all',
+) -> tuple[pd.DataFrame, list[str]]:
+    """Select features using statistical or model-based methods.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Feature data frame.
+    target : pd.Series
+        Target variable.
+    method : str, optional
+        Feature selection method: 'f_classif', 'chi2', or 'model_importance'. Default is 'f_classif'.
+    k : int | str, optional
+        Number of features to select. If 'all', all features are selected. Default is 'all'.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, list[str]]
+        Selected features DataFrame and list of selected feature names.
+    """
+    if len(df) == 0:
+        error_msg = "Input DataFrame is empty."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    if len(target) != len(df):
+        error_msg = "Target length does not match DataFrame length."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    if k == 'all':
+        k = df.shape[1]
+    elif not isinstance(k, int) or k <= 0:
+        error_msg = f"k must be a positive integer or 'all', got {k}."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    k = min(k, df.shape[1])
+
+    if method == 'f_classif':
+        logger.info(f"Selecting top {k} features using f_classif.")
+        selector = SelectKBest(score_func=f_classif, k=k)
+        selector.fit(df, target)
+        selected_indices = selector.get_support(indices=True)
+        selected_columns = df.columns[selected_indices].tolist()
+        return df.iloc[:, selected_indices], selected_columns
+
+    if method == 'chi2':
+        if (df < 0).any().any():
+            error_msg = "chi2 requires non-negative features."
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        logger.info(f"Selecting top {k} features using chi2.")
+        selector = SelectKBest(score_func=chi2, k=k)
+        selector.fit(df, target)
+        selected_indices = selector.get_support(indices=True)
+        selected_columns = df.columns[selected_indices].tolist()
+        return df.iloc[:, selected_indices], selected_columns
+
+    if method == 'model_importance':
+        logger.info(f"Selecting top {k} features using RandomForest importance.")
+        clf = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1)
+        clf.fit(df, target)
+        importance_df = pd.DataFrame(
+            {'feature': df.columns, 'importance': clf.feature_importances_}
+        )
+        importance_df = importance_df.sort_values('importance', ascending=False)
+        selected_columns = importance_df.head(k)['feature'].tolist()
+        return df[selected_columns], selected_columns
+
+    error_msg = f"Unsupported feature selection method: {method}. Use 'f_classif', 'chi2', or 'model_importance'."
+    logger.error(error_msg)
+    raise ValueError(error_msg)
 

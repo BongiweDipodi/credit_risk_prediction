@@ -12,3 +12,15 @@
 2026-06-16 17:21:54 [INFO] credit_risk_prediction: Scaling numerical columns: ['age', 'income']
 2026-06-16 17:21:54 [INFO] credit_risk_prediction: Scaling numerical columns: ['age', 'income']
 2026-06-16 17:21:54 [ERROR] credit_risk_prediction: Unsupported encoding method: unsupported. Use 'onehot' or 'label'.
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: Label encoding column: employment_status
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: Label encoding column: credit_history
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: One-hot encoding columns: ['employment_status', 'credit_history']
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: Auto-selected numerical columns for scaling: ['age', 'income']
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: Scaling numerical columns: ['age', 'income']
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: Scaling numerical columns: ['age', 'income']
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: Selecting top 1 features using f_classif.
+2026-06-16 17:24:22 [ERROR] credit_risk_prediction: Unsupported feature selection method: invalid. Use 'f_classif', 'chi2', or 'model_importance'.
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: Selecting top 2 features using f_classif.
+2026-06-16 17:24:22 [ERROR] credit_risk_prediction: Target length does not match DataFrame length.
+2026-06-16 17:24:22 [INFO] credit_risk_prediction: Selecting top 2 features using RandomForest importance.
+2026-06-16 17:24:22 [ERROR] credit_risk_prediction: Unsupported encoding method: unsupported. Use 'onehot' or 'label'.

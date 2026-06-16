@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.feature_engineering import encode_categorical, scale_numerical
+from src.feature_engineering import encode_categorical, scale_numerical, select_features
 
 
 class TestFeatureEngineering(unittest.TestCase):
@@ -61,6 +61,53 @@ class TestFeatureEngineering(unittest.TestCase):
         self.assertIn('age', scaled_df.columns)
         self.assertIn('income', scaled_df.columns)
         self.assertTrue(all(col in scaler.feature_names_in_ for col in ['age', 'income']))
+
+    def test_select_features_f_classif(self):
+        target = pd.Series([0, 1, 0, 1])
+        selected_df, selected_cols = select_features(
+            self.test_data[['age', 'income']],
+            target,
+            method='f_classif',
+            k=1,
+        )
+
+        self.assertEqual(selected_df.shape[1], 1)
+        self.assertEqual(len(selected_cols), 1)
+        self.assertIn(selected_cols[0], ['age', 'income'])
+
+    def test_select_features_model_importance(self):
+        target = pd.Series([0, 1, 0, 1])
+        selected_df, selected_cols = select_features(
+            self.test_data[['age', 'income']],
+            target,
+            method='model_importance',
+            k=2,
+        )
+
+        self.assertEqual(selected_df.shape[1], 2)
+        self.assertEqual(len(selected_cols), 2)
+
+    def test_select_features_invalid_method(self):
+        target = pd.Series([0, 1, 0, 1])
+        with self.assertRaises(ValueError):
+            select_features(self.test_data[['age', 'income']], target, method='invalid')
+
+    def test_select_features_k_all(self):
+        target = pd.Series([0, 1, 0, 1])
+        selected_df, selected_cols = select_features(
+            self.test_data[['age', 'income']],
+            target,
+            method='f_classif',
+            k='all',
+        )
+
+        self.assertEqual(len(selected_cols), 2)
+        self.assertEqual(selected_df.shape[1], 2)
+
+    def test_select_features_mismatched_lengths(self):
+        target = pd.Series([0, 1, 0])
+        with self.assertRaises(ValueError):
+            select_features(self.test_data[['age', 'income']], target, method='f_classif')
 
     def test_unknown_method_raises(self):
         with self.assertRaises(ValueError):
