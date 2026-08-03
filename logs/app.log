@@ -1,0 +1,2 @@
+2026-08-03 12:24:11 [INFO] credit_risk_prediction: Applied label encoding to columns: ['occupation']
+2026-08-03 12:24:11 [INFO] credit_risk_prediction: Applied one-hot encoding to columns: ['occupation', 'risk']
