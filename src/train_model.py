@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+import joblib
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
@@ -102,6 +105,8 @@ def train_model_pipeline(
     test_size: float = 0.2,
     random_state: int = 42,
     stratify: Optional[bool] = None,
+    persist_artifacts: bool = False,
+    artifact_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Train a RandomForest model and return metrics plus the fitted model."""
     dataset = build_training_dataset(
@@ -123,10 +128,39 @@ def train_model_pipeline(
         "f1": float(f1_score(dataset["test_target"], predictions, zero_division=0)),
     }
 
+    artifact_paths: Dict[str, str] = {}
+    if persist_artifacts:
+        output_dir = Path(artifact_dir or "models")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        model_path = output_dir / "random_forest_model.joblib"
+        metrics_path = output_dir / "training_metrics.json"
+        joblib.dump(model, model_path)
+        metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+        artifact_paths = {
+            "model": str(model_path),
+            "metrics": str(metrics_path),
+        }
+
     logger.info("Trained RandomForest model with accuracy %.4f", metrics["accuracy"])
     return {
         "model": model,
         "metrics": metrics,
         "dataset": dataset,
+        "artifact_paths": artifact_paths,
     }
+
+
+def main() -> None:
+    """Run the training pipeline on the repository's sample data if available."""
+    data_path = Path("data") / "credit_risk.csv"
+    if not data_path.exists():
+        logger.info("No training dataset found at %s; skipping run", data_path)
+        return
+
+    df = pd.read_csv(data_path)
+    train_model_pipeline(df, target_column="risk", persist_artifacts=True, artifact_dir="models")
+
+
+if __name__ == "__main__":
+    main()
 

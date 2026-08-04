@@ -1,4 +1,5 @@
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -54,6 +55,21 @@ class TestTrainModel(unittest.TestCase):
         self.assertIn("precision", result["metrics"])
         self.assertIn("recall", result["metrics"])
         self.assertIn("f1", result["metrics"])
+
+    def test_train_model_pipeline_persists_artifacts(self):
+        df = pd.DataFrame(
+            {
+                "income": [100, 200, 300, 400, 500, 600],
+                "loan_amount": [10, 20, 30, 40, 50, 60],
+                "risk": [0, 0, 0, 1, 1, 1],
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            result = train_model_pipeline(df, target_column="risk", persist_artifacts=True, artifact_dir=tmp_dir)
+
+            self.assertTrue(Path(tmp_dir, "random_forest_model.joblib").exists())
+            self.assertTrue(Path(tmp_dir, "training_metrics.json").exists())
+            self.assertIn("artifact_paths", result)
 
 
 if __name__ == "__main__":
