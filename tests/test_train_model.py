@@ -1,0 +1,43 @@
+import sys
+import unittest
+from pathlib import Path
+
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.train_model import build_training_dataset, split_data
+
+
+class TestTrainModel(unittest.TestCase):
+    def test_split_data(self):
+        df = pd.DataFrame(
+            {
+                "income": [100, 200, 300, 400],
+                "risk": [0, 0, 1, 1],
+            }
+        )
+        train_features, test_features, train_target, test_target = split_data(df, target_column="risk")
+
+        self.assertEqual(train_features.shape[0] + test_features.shape[0], len(df))
+        self.assertEqual(len(train_target), len(train_features))
+        self.assertEqual(len(test_target), len(test_features))
+
+    def test_build_training_dataset(self):
+        df = pd.DataFrame(
+            {
+                "income": [100, 200, 300, 400],
+                "risk": [0, 0, 1, 1],
+            }
+        )
+        dataset = build_training_dataset(df, target_column="risk")
+
+        self.assertIn("train_features", dataset)
+        self.assertIn("test_features", dataset)
+        self.assertIn("train_target", dataset)
+        self.assertIn("test_target", dataset)
+        self.assertEqual(dataset["target_column"], "risk")
+
+
+if __name__ == "__main__":
+    unittest.main()

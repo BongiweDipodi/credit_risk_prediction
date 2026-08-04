@@ -24,3 +24,5 @@
 2026-08-04 09:19:10 [INFO] credit_risk_prediction: Applied label encoding to columns: ['occupation']
 2026-08-04 09:19:10 [INFO] credit_risk_prediction: Applied one-hot encoding to columns: ['occupation', 'risk']
 2026-08-04 09:19:10 [INFO] credit_risk_prediction: Applied StandardScaler to columns: ['income', 'loan_amount']
+2026-08-04 10:09:13 [INFO] credit_risk_prediction: Split data into 2 train and 2 test rows
+2026-08-04 10:09:13 [INFO] credit_risk_prediction: Split data into 2 train and 2 test rows
