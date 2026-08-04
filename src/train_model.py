@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 
 from src.logger import logger
@@ -91,5 +93,40 @@ def build_training_dataset(
         "target_column": target_column,
         "test_size": test_size,
         "random_state": random_state,
+    }
+
+
+def train_model_pipeline(
+    df: pd.DataFrame,
+    target_column: str,
+    test_size: float = 0.2,
+    random_state: int = 42,
+    stratify: Optional[bool] = None,
+) -> Dict[str, Any]:
+    """Train a RandomForest model and return metrics plus the fitted model."""
+    dataset = build_training_dataset(
+        df,
+        target_column=target_column,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=stratify,
+    )
+
+    model = RandomForestClassifier(random_state=random_state, n_estimators=100)
+    model.fit(dataset["train_features"], dataset["train_target"])
+
+    predictions = model.predict(dataset["test_features"])
+    metrics = {
+        "accuracy": float(accuracy_score(dataset["test_target"], predictions)),
+        "precision": float(precision_score(dataset["test_target"], predictions, zero_division=0)),
+        "recall": float(recall_score(dataset["test_target"], predictions, zero_division=0)),
+        "f1": float(f1_score(dataset["test_target"], predictions, zero_division=0)),
+    }
+
+    logger.info("Trained RandomForest model with accuracy %.4f", metrics["accuracy"])
+    return {
+        "model": model,
+        "metrics": metrics,
+        "dataset": dataset,
     }
 

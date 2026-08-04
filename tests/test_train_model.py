@@ -6,7 +6,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.train_model import build_training_dataset, split_data
+from src.train_model import build_training_dataset, split_data, train_model_pipeline
 
 
 class TestTrainModel(unittest.TestCase):
@@ -37,6 +37,23 @@ class TestTrainModel(unittest.TestCase):
         self.assertIn("train_target", dataset)
         self.assertIn("test_target", dataset)
         self.assertEqual(dataset["target_column"], "risk")
+
+    def test_train_model_pipeline(self):
+        df = pd.DataFrame(
+            {
+                "income": [100, 200, 300, 400, 500, 600],
+                "loan_amount": [10, 20, 30, 40, 50, 60],
+                "risk": [0, 0, 0, 1, 1, 1],
+            }
+        )
+        result = train_model_pipeline(df, target_column="risk")
+
+        self.assertIn("model", result)
+        self.assertIn("metrics", result)
+        self.assertIn("accuracy", result["metrics"])
+        self.assertIn("precision", result["metrics"])
+        self.assertIn("recall", result["metrics"])
+        self.assertIn("f1", result["metrics"])
 
 
 if __name__ == "__main__":
