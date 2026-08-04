@@ -6,7 +6,11 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.feature_engineering import encode_categorical_features
+from src.feature_engineering import (
+    encode_categorical_features,
+    scale_numeric_features,
+    select_features,
+)
 
 
 class TestFeatureEngineering(unittest.TestCase):
@@ -42,6 +46,30 @@ class TestFeatureEngineering(unittest.TestCase):
         self.assertEqual(encoded_df["occupation"].tolist(), [0, 1, 0])
         self.assertIn("occupation", encoded_df.columns)
         self.assertEqual(metadata["method"], "label")
+
+    def test_standard_scaler(self):
+        scaled_df, metadata = scale_numeric_features(
+            pd.DataFrame({"income": [100, 200, 300], "loan_amount": [10, 20, 30]}),
+            numeric_columns=["income", "loan_amount"],
+        )
+
+        self.assertAlmostEqual(float(scaled_df["income"].mean()), 0.0, places=6)
+        self.assertAlmostEqual(float(scaled_df["income"].std(ddof=0)), 1.0, places=6)
+        self.assertEqual(metadata["scaled_columns"], ["income", "loan_amount"])
+
+    def test_feature_selection(self):
+        df = pd.DataFrame(
+            {
+                "income": [100, 200, 300, 400],
+                "loan_amount": [20, 30, 40, 50],
+                "risk": [0, 0, 1, 1],
+            }
+        )
+        selected_df, metadata = select_features(df, target_column="risk", top_k=2)
+
+        self.assertIn("risk", selected_df.columns)
+        self.assertEqual(len(metadata["selected_features"]), 2)
+        self.assertTrue(all(col in selected_df.columns for col in metadata["selected_features"]))
 
 
 if __name__ == "__main__":
