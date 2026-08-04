@@ -55,6 +55,7 @@ class TestTrainModel(unittest.TestCase):
         self.assertIn("precision", result["metrics"])
         self.assertIn("recall", result["metrics"])
         self.assertIn("f1", result["metrics"])
+        self.assertIn("roc_auc", result["metrics"])
         self.assertIn("cv_mean_accuracy", result["metrics"])
         self.assertIn("cv_std_accuracy", result["metrics"])
         self.assertIn("best_params", result["metrics"])

@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Tuple
 import joblib
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold, train_test_split
 
 from src.logger import logger
@@ -143,11 +143,13 @@ def train_model_pipeline(
     model.fit(dataset["train_features"], dataset["train_target"])
 
     predictions = model.predict(dataset["test_features"])
+    probabilities = model.predict_proba(dataset["test_features"])[:, 1]
     metrics = {
         "accuracy": float(accuracy_score(dataset["test_target"], predictions)),
         "precision": float(precision_score(dataset["test_target"], predictions, zero_division=0)),
         "recall": float(recall_score(dataset["test_target"], predictions, zero_division=0)),
         "f1": float(f1_score(dataset["test_target"], predictions, zero_division=0)),
+        "roc_auc": float(roc_auc_score(dataset["test_target"], probabilities)),
         "best_params": grid_search.best_params_,
     }
 
