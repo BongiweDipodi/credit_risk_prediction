@@ -7,7 +7,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.train_model import build_training_dataset, split_data, train_model_pipeline
+from src.train_model import build_training_dataset, load_model_artifacts, split_data, train_model_pipeline
 
 
 class TestTrainModel(unittest.TestCase):
@@ -74,6 +74,10 @@ class TestTrainModel(unittest.TestCase):
             self.assertTrue(Path(tmp_dir, "random_forest_model.joblib").exists())
             self.assertTrue(Path(tmp_dir, "training_metrics.json").exists())
             self.assertIn("artifact_paths", result)
+
+            loaded = load_model_artifacts(tmp_dir)
+            self.assertIn("model", loaded)
+            self.assertIn("metrics", loaded)
 
 
 if __name__ == "__main__":

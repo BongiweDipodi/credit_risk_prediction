@@ -99,6 +99,38 @@ def build_training_dataset(
     }
 
 
+def save_model_artifacts(model: Any, metrics: Dict[str, Any], artifact_dir: Optional[str] = None) -> Dict[str, str]:
+    """Persist a trained model and evaluation metrics to disk."""
+    output_dir = Path(artifact_dir or "models")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    model_path = output_dir / "random_forest_model.joblib"
+    metrics_path = output_dir / "training_metrics.json"
+
+    joblib.dump(model, model_path)
+    metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+
+    return {
+        "model": str(model_path),
+        "metrics": str(metrics_path),
+    }
+
+
+def load_model_artifacts(artifact_dir: Optional[str] = None) -> Dict[str, Any]:
+    """Load a persisted model and its metrics from disk."""
+    output_dir = Path(artifact_dir or "models")
+    model_path = output_dir / "random_forest_model.joblib"
+    metrics_path = output_dir / "training_metrics.json"
+
+    if not model_path.exists() or not metrics_path.exists():
+        raise FileNotFoundError("Model artifacts were not found")
+
+    return {
+        "model": joblib.load(model_path),
+        "metrics": json.loads(metrics_path.read_text(encoding="utf-8")),
+    }
+
+
 def train_model_pipeline(
     df: pd.DataFrame,
     target_column: str,
@@ -159,16 +191,7 @@ def train_model_pipeline(
 
     artifact_paths: Dict[str, str] = {}
     if persist_artifacts:
-        output_dir = Path(artifact_dir or "models")
-        output_dir.mkdir(parents=True, exist_ok=True)
-        model_path = output_dir / "random_forest_model.joblib"
-        metrics_path = output_dir / "training_metrics.json"
-        joblib.dump(model, model_path)
-        metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-        artifact_paths = {
-            "model": str(model_path),
-            "metrics": str(metrics_path),
-        }
+        artifact_paths = save_model_artifacts(model, metrics, artifact_dir=artifact_dir)
 
     logger.info("Trained RandomForest model with accuracy %.4f", metrics["accuracy"])
     return {
