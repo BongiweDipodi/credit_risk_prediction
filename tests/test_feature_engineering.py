@@ -7,6 +7,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.feature_engineering import (
+    analyze_feature_importance,
     build_feature_pipeline,
     encode_categorical_features,
     scale_numeric_features,
@@ -92,6 +93,15 @@ class TestFeatureEngineering(unittest.TestCase):
         self.assertIn("encoding", metadata)
         self.assertIn("scaling", metadata)
         self.assertIn("selection", metadata)
+
+    def test_feature_importance_analysis(self):
+        features = pd.DataFrame({"income": [100, 200, 300, 400], "loan_amount": [10, 20, 30, 40]})
+        target = pd.Series([0, 0, 1, 1])
+        metadata = analyze_feature_importance(features, target, top_k=2)
+
+        self.assertEqual(metadata["model"], "RandomForestClassifier")
+        self.assertEqual(len(metadata["top_features"]), 2)
+        self.assertTrue(all(feature in metadata["importance_scores"] for feature in metadata["top_features"]))
 
 
 if __name__ == "__main__":

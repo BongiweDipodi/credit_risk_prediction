@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
 
 from src.logger import logger
 
@@ -184,4 +185,32 @@ def build_feature_pipeline(
 
     logger.info("Built feature transformation pipeline for target '%s'", target_column)
     return selected_df, pipeline_metadata
+
+
+def analyze_feature_importance(
+    X: pd.DataFrame,
+    y: pd.Series,
+    top_k: int = 5,
+    random_state: int = 42,
+) -> Dict[str, Any]:
+    """Analyze feature importance using a RandomForest model."""
+    if X is None or not isinstance(X, pd.DataFrame):
+        raise ValueError("X must be a pandas DataFrame")
+    if y is None or not isinstance(y, pd.Series):
+        raise ValueError("y must be a pandas Series")
+
+    model = RandomForestClassifier(random_state=random_state, n_estimators=100)
+    model.fit(X, y)
+
+    importances = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
+    ranked = importances.to_dict()
+    top_features = list(importances.head(max(1, min(top_k, len(importances)))).index)
+
+    metadata = {
+        "top_features": top_features,
+        "importance_scores": ranked,
+        "model": "RandomForestClassifier",
+    }
+    logger.info("Computed feature importance for %s features", len(importances))
+    return metadata
 
