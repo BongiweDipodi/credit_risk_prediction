@@ -8,7 +8,7 @@ import joblib
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score, StratifiedKFold, train_test_split
 
 from src.logger import logger
 
@@ -107,6 +107,7 @@ def train_model_pipeline(
     stratify: Optional[bool] = None,
     persist_artifacts: bool = False,
     artifact_dir: Optional[str] = None,
+    cv_folds: int = 5,
 ) -> Dict[str, Any]:
     """Train a RandomForest model and return metrics plus the fitted model."""
     dataset = build_training_dataset(
@@ -127,6 +128,11 @@ def train_model_pipeline(
         "recall": float(recall_score(dataset["test_target"], predictions, zero_division=0)),
         "f1": float(f1_score(dataset["test_target"], predictions, zero_division=0)),
     }
+
+    cv = StratifiedKFold(n_splits=min(cv_folds, len(dataset["train_target"].unique())), shuffle=True, random_state=random_state)
+    cv_scores = cross_val_score(model, dataset["train_features"], dataset["train_target"], cv=cv, scoring="accuracy")
+    metrics["cv_mean_accuracy"] = float(cv_scores.mean())
+    metrics["cv_std_accuracy"] = float(cv_scores.std())
 
     artifact_paths: Dict[str, str] = {}
     if persist_artifacts:
