@@ -57,6 +57,7 @@ class TestTrainModel(unittest.TestCase):
         self.assertIn("f1", result["metrics"])
         self.assertIn("cv_mean_accuracy", result["metrics"])
         self.assertIn("cv_std_accuracy", result["metrics"])
+        self.assertIn("best_params", result["metrics"])
 
     def test_train_model_pipeline_persists_artifacts(self):
         df = pd.DataFrame(

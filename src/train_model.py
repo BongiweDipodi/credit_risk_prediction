@@ -8,7 +8,7 @@ import joblib
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.model_selection import cross_val_score, StratifiedKFold, train_test_split
+from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold, train_test_split
 
 from src.logger import logger
 
@@ -118,7 +118,28 @@ def train_model_pipeline(
         stratify=stratify,
     )
 
-    model = RandomForestClassifier(random_state=random_state, n_estimators=100)
+    base_model = RandomForestClassifier(random_state=random_state)
+    param_grid = {
+        "n_estimators": [50, 100],
+        "max_depth": [None, 5, 10],
+        "min_samples_split": [2, 5],
+    }
+
+    cv = StratifiedKFold(
+        n_splits=min(cv_folds, len(dataset["train_target"].unique())),
+        shuffle=True,
+        random_state=random_state,
+    )
+    grid_search = GridSearchCV(
+        estimator=base_model,
+        param_grid=param_grid,
+        scoring="accuracy",
+        cv=cv,
+        n_jobs=1,
+    )
+    grid_search.fit(dataset["train_features"], dataset["train_target"])
+
+    model = grid_search.best_estimator_
     model.fit(dataset["train_features"], dataset["train_target"])
 
     predictions = model.predict(dataset["test_features"])
@@ -127,9 +148,9 @@ def train_model_pipeline(
         "precision": float(precision_score(dataset["test_target"], predictions, zero_division=0)),
         "recall": float(recall_score(dataset["test_target"], predictions, zero_division=0)),
         "f1": float(f1_score(dataset["test_target"], predictions, zero_division=0)),
+        "best_params": grid_search.best_params_,
     }
 
-    cv = StratifiedKFold(n_splits=min(cv_folds, len(dataset["train_target"].unique())), shuffle=True, random_state=random_state)
     cv_scores = cross_val_score(model, dataset["train_features"], dataset["train_target"], cv=cv, scoring="accuracy")
     metrics["cv_mean_accuracy"] = float(cv_scores.mean())
     metrics["cv_std_accuracy"] = float(cv_scores.std())
