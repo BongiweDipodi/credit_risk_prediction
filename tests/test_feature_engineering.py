@@ -7,6 +7,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.feature_engineering import (
+    build_feature_pipeline,
     encode_categorical_features,
     scale_numeric_features,
     select_features,
@@ -70,6 +71,27 @@ class TestFeatureEngineering(unittest.TestCase):
         self.assertIn("risk", selected_df.columns)
         self.assertEqual(len(metadata["selected_features"]), 2)
         self.assertTrue(all(col in selected_df.columns for col in metadata["selected_features"]))
+
+    def test_feature_pipeline(self):
+        df = pd.DataFrame(
+            {
+                "income": [100, 200, 300, 400],
+                "occupation": ["Engineer", "Teacher", "Engineer", "Teacher"],
+                "risk": [0, 0, 1, 1],
+            }
+        )
+        transformed_df, metadata = build_feature_pipeline(
+            df,
+            target_column="risk",
+            categorical_columns=["occupation"],
+            numeric_columns=["income"],
+            top_k=2,
+        )
+
+        self.assertIn("risk", transformed_df.columns)
+        self.assertIn("encoding", metadata)
+        self.assertIn("scaling", metadata)
+        self.assertIn("selection", metadata)
 
 
 if __name__ == "__main__":

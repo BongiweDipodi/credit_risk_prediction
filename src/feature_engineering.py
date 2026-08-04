@@ -140,3 +140,48 @@ def select_features(
     logger.info("Selected features: %s", selected)
     return working_df[[*selected, target_column]], metadata
 
+
+def build_feature_pipeline(
+    df: pd.DataFrame,
+    target_column: str,
+    categorical_columns: Optional[List[str]] = None,
+    numeric_columns: Optional[List[str]] = None,
+    feature_columns: Optional[List[str]] = None,
+    top_k: int = 5,
+    encoding_method: str = "one_hot",
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """Create a full feature transformation pipeline: encode → scale → select."""
+    if df is None or not isinstance(df, pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame")
+    if target_column not in df.columns:
+        raise ValueError(f"Target column not found: {target_column}")
+
+    working_df = df.copy()
+    pipeline_metadata: Dict[str, Any] = {}
+
+    encoded_df, encoding_metadata = encode_categorical_features(
+        working_df,
+        categorical_columns=categorical_columns,
+        method=encoding_method,
+    )
+    pipeline_metadata["encoding"] = encoding_metadata
+    working_df = encoded_df
+
+    numeric_candidates = numeric_columns or [
+        col for col in working_df.select_dtypes(include=["number"]).columns if col != target_column
+    ]
+    scaled_df, scaling_metadata = scale_numeric_features(working_df, numeric_columns=numeric_candidates)
+    pipeline_metadata["scaling"] = scaling_metadata
+    working_df = scaled_df
+
+    selected_df, selection_metadata = select_features(
+        working_df,
+        target_column=target_column,
+        feature_columns=feature_columns or [col for col in working_df.columns if col != target_column],
+        top_k=top_k,
+    )
+    pipeline_metadata["selection"] = selection_metadata
+
+    logger.info("Built feature transformation pipeline for target '%s'", target_column)
+    return selected_df, pipeline_metadata
+
