@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -99,35 +100,56 @@ def build_training_dataset(
     }
 
 
-def save_model_artifacts(model: Any, metrics: Dict[str, Any], artifact_dir: Optional[str] = None) -> Dict[str, str]:
-    """Persist a trained model and evaluation metrics to disk."""
-    output_dir = Path(artifact_dir or "models")
-    output_dir.mkdir(parents=True, exist_ok=True)
+def save_model_artifacts(model: Any, metrics: Dict[str, Any], artifact_dir: Optional[str] = None, version: Optional[str] = None) -> Dict[str, str]:
+    """Persist a trained model and evaluation metrics in a versioned directory."""
+    base_dir = Path(artifact_dir or "models")
+    base_dir.mkdir(parents=True, exist_ok=True)
 
-    model_path = output_dir / "random_forest_model.joblib"
-    metrics_path = output_dir / "training_metrics.json"
+    version_name = version or datetime.utcnow().strftime("model_%Y%m%d_%H%M%S")
+    version_dir = base_dir / version_name
+    version_dir.mkdir(parents=True, exist_ok=True)
+
+    model_path = version_dir / "model.joblib"
+    metrics_path = version_dir / "metrics.json"
+    metadata_path = version_dir / "metadata.json"
 
     joblib.dump(model, model_path)
     metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    metadata_path.write_text(
+        json.dumps({"version": version_name, "created_at": datetime.utcnow().isoformat()}, indent=2),
+        encoding="utf-8",
+    )
 
     return {
+        "version_dir": str(version_dir),
         "model": str(model_path),
         "metrics": str(metrics_path),
+        "metadata": str(metadata_path),
     }
 
 
-def load_model_artifacts(artifact_dir: Optional[str] = None) -> Dict[str, Any]:
-    """Load a persisted model and its metrics from disk."""
-    output_dir = Path(artifact_dir or "models")
-    model_path = output_dir / "random_forest_model.joblib"
-    metrics_path = output_dir / "training_metrics.json"
+def load_model_artifacts(artifact_dir: Optional[str] = None, version: Optional[str] = None) -> Dict[str, Any]:
+    """Load a persisted model and its metrics from the latest or a named version."""
+    base_dir = Path(artifact_dir or "models")
+    if version is None:
+        versions = sorted([p for p in base_dir.iterdir() if p.is_dir()]) if base_dir.exists() else []
+        if not versions:
+            raise FileNotFoundError("Model artifacts were not found")
+        version_dir = versions[-1]
+    else:
+        version_dir = base_dir / version
 
-    if not model_path.exists() or not metrics_path.exists():
+    model_path = version_dir / "model.joblib"
+    metrics_path = version_dir / "metrics.json"
+    metadata_path = version_dir / "metadata.json"
+
+    if not model_path.exists() or not metrics_path.exists() or not metadata_path.exists():
         raise FileNotFoundError("Model artifacts were not found")
 
     return {
         "model": joblib.load(model_path),
         "metrics": json.loads(metrics_path.read_text(encoding="utf-8")),
+        "metadata": json.loads(metadata_path.read_text(encoding="utf-8")),
     }
 
 

@@ -54,3 +54,9 @@
 2026-08-04 11:11:06 [INFO] credit_risk_prediction: Trained RandomForest model with accuracy 1.0000
 2026-08-04 11:11:06 [INFO] credit_risk_prediction: Split data into 4 train and 2 test rows
 2026-08-04 11:11:07 [INFO] credit_risk_prediction: Trained RandomForest model with accuracy 1.0000
+2026-08-04 16:04:33 [INFO] credit_risk_prediction: Split data into 2 train and 2 test rows
+2026-08-04 16:04:33 [INFO] credit_risk_prediction: Split data into 2 train and 2 test rows
+2026-08-04 16:04:33 [INFO] credit_risk_prediction: Split data into 4 train and 2 test rows
+2026-08-04 16:04:34 [INFO] credit_risk_prediction: Trained RandomForest model with accuracy 1.0000
+2026-08-04 16:04:34 [INFO] credit_risk_prediction: Split data into 4 train and 2 test rows
+2026-08-04 16:04:35 [INFO] credit_risk_prediction: Trained RandomForest model with accuracy 1.0000

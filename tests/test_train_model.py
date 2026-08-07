@@ -71,13 +71,17 @@ class TestTrainModel(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             result = train_model_pipeline(df, target_column="risk", persist_artifacts=True, artifact_dir=tmp_dir)
 
-            self.assertTrue(Path(tmp_dir, "random_forest_model.joblib").exists())
-            self.assertTrue(Path(tmp_dir, "training_metrics.json").exists())
+            version_dir = Path(result["artifact_paths"]["version_dir"])
+            self.assertTrue(version_dir.exists())
+            self.assertTrue(version_dir.joinpath("model.joblib").exists())
+            self.assertTrue(version_dir.joinpath("metrics.json").exists())
+            self.assertTrue(version_dir.joinpath("metadata.json").exists())
             self.assertIn("artifact_paths", result)
 
             loaded = load_model_artifacts(tmp_dir)
             self.assertIn("model", loaded)
             self.assertIn("metrics", loaded)
+            self.assertIn("metadata", loaded)
 
 
 if __name__ == "__main__":
