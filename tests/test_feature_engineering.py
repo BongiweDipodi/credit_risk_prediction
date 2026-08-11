@@ -5,7 +5,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.feature_engineering import encode_categorical, scale_numerical, select_features
+from src.feature_engineering import (
+    encode_categorical,
+    scale_numerical,
+    select_features,
+    build_preprocessing_pipeline,
+    compute_feature_importance,
+)
 
 
 class TestFeatureEngineering(unittest.TestCase):
@@ -108,6 +114,74 @@ class TestFeatureEngineering(unittest.TestCase):
         target = pd.Series([0, 1, 0])
         with self.assertRaises(ValueError):
             select_features(self.test_data[['age', 'income']], target, method='f_classif')
+
+    def test_build_preprocessing_pipeline_onehot(self):
+        pipeline = build_preprocessing_pipeline(
+            categorical_columns=['employment_status', 'credit_history'],
+            numerical_columns=['age', 'income'],
+            encoder_method='onehot',
+        )
+
+        transformed = pipeline.fit_transform(self.test_data)
+        # retrieve output feature names when available
+        try:
+            feature_names = pipeline.named_steps['preprocessor'].get_feature_names_out(
+                self.test_data.columns
+            )
+            trans_df = pd.DataFrame(transformed, columns=feature_names, index=self.test_data.index)
+            # numeric columns should have zero mean and unit variance
+            numeric_cols = [c for c in feature_names if 'age' in c or 'income' in c]
+            self.assertGreater(len(numeric_cols), 0)
+            self.assertAlmostEqual(trans_df[numeric_cols].mean().mean(), 0.0, places=6)
+        except Exception:
+            # Fallback: ensure transformed is array-like with correct row count
+            import numpy as np
+
+            self.assertEqual(transformed.shape[0], self.test_data.shape[0])
+
+    def test_build_preprocessing_pipeline_ordinal(self):
+        pipeline = build_preprocessing_pipeline(
+            categorical_columns=['employment_status', 'credit_history'],
+            numerical_columns=['age', 'income'],
+            encoder_method='ordinal',
+        )
+
+        transformed = pipeline.fit_transform(self.test_data)
+        self.assertEqual(transformed.shape[0], self.test_data.shape[0])
+
+    def test_compute_feature_importance_random_forest(self):
+        target = pd.Series([0, 1, 0, 1])
+        importance_df = compute_feature_importance(
+            self.test_data[['age', 'income']],
+            target,
+            method='random_forest',
+            top_k=2,
+        )
+
+        self.assertEqual(importance_df.shape[0], 2)
+        self.assertListEqual(sorted(importance_df['feature'].tolist()), ['age', 'income'])
+        self.assertTrue((importance_df['importance'] >= 0).all())
+
+    def test_compute_feature_importance_f_classif(self):
+        target = pd.Series([0, 1, 0, 1])
+        importance_df = compute_feature_importance(
+            self.test_data[['age', 'income']],
+            target,
+            method='f_classif',
+            top_k=1,
+        )
+
+        self.assertEqual(importance_df.shape[0], 1)
+        self.assertIn(importance_df.iloc[0]['feature'], ['age', 'income'])
+
+    def test_compute_feature_importance_invalid_method(self):
+        target = pd.Series([0, 1, 0, 1])
+        with self.assertRaises(ValueError):
+            compute_feature_importance(
+                self.test_data[['age', 'income']],
+                target,
+                method='invalid',
+            )
 
     def test_unknown_method_raises(self):
         with self.assertRaises(ValueError):

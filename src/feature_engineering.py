@@ -1,6 +1,14 @@
 import pandas as pd
-import numpy as np
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from typing import Literal
+from sklearn.preprocessing import (
+    LabelEncoder,
+    OneHotEncoder,
+    OrdinalEncoder,
+    StandardScaler,
+)
+from sklearn.compose import ColumnTransformer, make_column_selector
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
 from sklearn.feature_selection import SelectKBest, f_classif, chi2
 from sklearn.ensemble import RandomForestClassifier
 
@@ -11,7 +19,7 @@ def encode_categorical(
     df: pd.DataFrame,
     categorical_columns: list[str],
     method: str = 'onehot',
-    handle_unknown: str = 'ignore',
+    handle_unknown: Literal['error', 'ignore', 'infrequent_if_exist'] = 'ignore',
 ) -> tuple[pd.DataFrame, object]:
     """Encode categorical columns using either one-hot or label encoding.
 
@@ -44,7 +52,11 @@ def encode_categorical(
         for column in categorical_columns:
             encoder = LabelEncoder()
             logger.info(f"Label encoding column: {column}")
-            df[column] = encoder.fit_transform(df[column].astype(str))
+            encoded_series = pd.Series(
+                encoder.fit_transform(df[column].astype(str)),
+                index=df.index,
+            )
+            df[column] = encoded_series
             encoders[column] = encoder
         return df, encoders
 
@@ -189,4 +201,130 @@ def select_features(
     error_msg = f"Unsupported feature selection method: {method}. Use 'f_classif', 'chi2', or 'model_importance'."
     logger.error(error_msg)
     raise ValueError(error_msg)
+
+
+def compute_feature_importance(
+    df: pd.DataFrame,
+    target: pd.Series,
+    method: str = 'random_forest',
+    top_k: int | None = None,
+) -> pd.DataFrame:
+    """Compute feature importance scores using model-based or statistical methods.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Feature data frame.
+    target : pd.Series
+        Target variable.
+    method : str, optional
+        Importance extraction method: 'random_forest' or 'f_classif'. Default is 'random_forest'.
+    top_k : int | None, optional
+        If given, returns only the top k features. Default is None (all features).
+
+    Returns
+    -------
+    pd.DataFrame
+        Feature importance scores sorted descending.
+    """
+    if len(df) == 0:
+        error_msg = "Input DataFrame is empty."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    if len(target) != len(df):
+        error_msg = "Target length does not match DataFrame length."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    if top_k is not None and (not isinstance(top_k, int) or top_k <= 0):
+        error_msg = f"top_k must be a positive integer or None, got {top_k}."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    if method == 'random_forest':
+        logger.info("Computing feature importance using RandomForestClassifier.")
+        model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+        model.fit(df, target)
+        importance = model.feature_importances_
+    elif method == 'f_classif':
+        logger.info("Computing feature importance using f_classif scores.")
+        selector = SelectKBest(score_func=f_classif, k='all')
+        selector.fit(df, target)
+        importance = selector.scores_
+    else:
+        error_msg = f"Unsupported importance method: {method}. Use 'random_forest' or 'f_classif'."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    importance_df = pd.DataFrame(
+        {'feature': df.columns, 'importance': importance}
+    ).sort_values('importance', ascending=False).reset_index(drop=True)
+
+    if top_k is not None:
+        importance_df = importance_df.head(top_k)
+
+    return importance_df
+
+
+def build_preprocessing_pipeline(
+    categorical_columns: list[str] | None = None,
+    numerical_columns: list[str] | None = None,
+    encoder_method: str = 'onehot',
+) -> Pipeline:
+    """Build a preprocessing pipeline combining imputation, encoding, and scaling.
+
+    Parameters
+    ----------
+    categorical_columns : list[str] | None
+        Categorical columns to encode. If None, categorical features are skipped.
+    numerical_columns : list[str] | None
+        Numerical columns to scale. If None, numeric columns are selected automatically.
+    encoder_method : str, optional
+        'onehot' or 'ordinal' encoding strategy. Default is 'onehot'.
+
+    Returns
+    -------
+    Pipeline
+        A sklearn Pipeline containing a ColumnTransformer preprocessor.
+    """
+    numeric_transformer = Pipeline(
+        steps=[
+            ('imputer', SimpleImputer(strategy='median')),
+            ('scaler', StandardScaler()),
+        ]
+    )
+
+    if encoder_method == 'onehot':
+        try:
+            cat_encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+        except TypeError:
+            cat_encoder = OneHotEncoder(handle_unknown='ignore', sparse=False)
+    elif encoder_method == 'ordinal':
+        cat_encoder = OrdinalEncoder()
+    else:
+        error_msg = f"Unsupported encoder_method: {encoder_method}. Use 'onehot' or 'ordinal'."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
+            ('encoder', cat_encoder),
+        ]
+    )
+
+    transformers = []
+    if numerical_columns is None:
+        transformers.append(('num', numeric_transformer, make_column_selector(dtype_include=np.number)))
+    else:
+        transformers.append(('num', numeric_transformer, numerical_columns))
+
+    if categorical_columns is not None:
+        transformers.append(('cat', categorical_transformer, categorical_columns))
+
+    preprocessor = ColumnTransformer(transformers=transformers, remainder='drop')
+    pipeline = Pipeline(steps=[('preprocessor', preprocessor)])
+    logger.info('Preprocessing pipeline constructed')
+    return pipeline
 
